@@ -5,6 +5,7 @@ from nodes import chat_node
 class AgentState(TypedDict):
     input: str
     response: str
+    session_id: str
 
 
 def build_graph():
