@@ -12,6 +12,7 @@ dependencies = [
     "numpy>=2.4.2",
     "python-dotenv>=1.0.1",
     "sounddevice>=0.5.5",
+    "typecast-python>=0.1.6",
     "webrtcvad-wheels>=2.0.14",
 ]
 
