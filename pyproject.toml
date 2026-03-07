@@ -5,9 +5,21 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "faster-whisper>=1.2.1",
+    "ffmpeg-python>=0.2.0",
+    "jupyter>=1.1.1",
     "langchain>=1.2.10",
     "langchain-community>=0.4.1",
     "langchain-core>=1.2.17",
     "langchain-groq>=1.1.2",
+    "langchain-voyageai>=0.3.2",
     "langgraph>=1.0.10",
+    "matplotlib>=3.10.8",
+    "numpy>=2.4.2",
+    "openai-whisper>=20250625",
+    "scipy>=1.17.1",
+    "sounddevice>=0.5.5",
+    "torch>=2.10.0",
+    "typecast-python>=0.1.6",
+    "webrtcvad-wheels>=2.0.14",
 ]
