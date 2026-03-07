@@ -17,7 +17,7 @@ def float_to_pcm16(audio):
     return audio_int16
 
 def remove_silence(audio):
-    vad = webrtcvad.Vad(1)
+    vad = webrtcvad.Vad(3)
     frames = []
     num_frames = len(audio) // FRAME_SIZE
 
@@ -47,7 +47,7 @@ class AudioPipeline:
         print(f"Loading Whisper model ({model_size})...")
         # CPU/INT8 as default to be compatible on any machine
         self.model = WhisperModel(model_size, device="cpu", compute_type="int8")
-        self.vad = webrtcvad.Vad(1)  # Lowered aggressiveness to 1 so it doesn't miss speech
+        self.vad = webrtcvad.Vad(3)  # Lowered aggressiveness to 1 so it doesn't miss speech
         print("Audio pipeline initialized.")
 
     def listen_and_capture(self):
