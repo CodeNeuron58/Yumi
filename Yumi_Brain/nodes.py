@@ -1,6 +1,6 @@
 from langchain_core.runnables.history import RunnableWithMessageHistory
-from memory.chat_history import get_session_history
-from llm import chain
+from Yumi_Brain.memory.chat_history import get_session_history
+from Yumi_Brain.llm import chain
 
 chat_chain = RunnableWithMessageHistory(
     chain,

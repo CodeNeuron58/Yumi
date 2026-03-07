@@ -1,6 +1,6 @@
 from langgraph.graph import StateGraph, END
 from typing import TypedDict
-from nodes import chat_node
+from Yumi_Brain.nodes import chat_node
 
 class AgentState(TypedDict):
     input: str
