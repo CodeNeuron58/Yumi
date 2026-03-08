@@ -25,10 +25,10 @@ class YumiSpeaker:
 
     def speak(self, text: str, play_local: bool = False):
         """
-        Synthesizes text, optionally plays it locally, and returns the base64 encoded wav bytes for the frontend.
+        Synthesizes text, optionally plays it locally, and returns the base64 encoded wav bytes for the frontend, along with audio duration.
         """
         if not text:
-            return None
+            return None, 0.0
 
         print(f"Synthesizing voice...")
         try:
@@ -45,12 +45,16 @@ class YumiSpeaker:
             # Read from audio_data bytes into wave
             audio_data = io.BytesIO(response.audio_data)
             
-            if play_local:
-                with wave.open(audio_data, 'rb') as wf:
+            duration = 0.0
+            with wave.open(audio_data, 'rb') as wf:
+                framerate = wf.getframerate()
+                nframes = wf.getnframes()
+                duration = nframes / float(framerate)
+                
+                if play_local:
                     # Get audio parameters
                     channels = wf.getnchannels()
                     sample_width = wf.getsampwidth()
-                    framerate = wf.getframerate()
                     
                     # Determine correct numpy dtype based on sample width
                     if sample_width == 1:
@@ -77,8 +81,8 @@ class YumiSpeaker:
             
             # Encode raw wave bytes for WebSockets transmission
             audio_base64 = base64.b64encode(response.audio_data).decode('utf-8')
-            return audio_base64
+            return audio_base64, duration
             
         except Exception as e:
             print(f"Error speaking response: {e}")
-            return None
+            return None, 0.0

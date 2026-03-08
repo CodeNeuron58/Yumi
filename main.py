@@ -82,7 +82,7 @@ def speak_node(state: MainState):
     print(f"[{expression} | {motion}]")
     
     # Synthesize audio and get base64 string
-    audio_b64 = speaker.speak(response_text, play_local=False)
+    audio_b64, duration = speaker.speak(response_text, play_local=False)
     
     # Prepare payload for frontend
     payload = {
@@ -110,6 +110,11 @@ def speak_node(state: MainState):
     except Exception as e:
         print(f"Failed to broadcast WS: {e}")
     
+    if duration > 0:
+        import time
+        print(f"Waiting for {duration:.2f} seconds while audio plays on frontend before listening again...")
+        time.sleep(duration + 0.5)  # add 500ms safety buffer
+        
     print("-" * 50)
     return {"response": response_text}
     
