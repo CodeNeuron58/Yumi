@@ -10,13 +10,18 @@ chat_chain = RunnableWithMessageHistory(
 )
 
 def chat_node(state):
-
     session_id = state["session_id"]
     user_input = state["input"]
 
-    response = chat_chain.invoke(
+    # We now expect a Pydantic YumiResponse object instead of an AIMessage (due to structured output)
+    response_obj = chat_chain.invoke(
         {"input": user_input},
         config={"configurable": {"session_id": session_id}}
     )
 
-    return {"response": response.content}
+    # Return the dictionary representing all dimensions of the LLM state output
+    return {
+        "response": response_obj.response_text,
+        "expression": response_obj.expression,
+        "motion": response_obj.motion
+    }

@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yumi Live2D Console</title>
+    <!-- Load PixiJS -->
+    <script src="https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/6.5.2/browser/pixi.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display/dist/cubism4.min.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #1e1e2e;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            height: 100vh;
+        }
+
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 1;
+        }
+
+        #ui-layer {
+            position: relative;
+            z-index: 10;
+            width: 80%;
+            max-width: 800px;
+            margin-bottom: 50px;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(5px);
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        #subtitle {
+            font-size: 24px;
+            line-height: 1.4;
+            font-weight: 500;
+        }
+
+        #btn-start {
+            position: absolute;
+            z-index: 20;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 15px 30px;
+            font-size: 20px;
+            background-color: #ff79c6;
+            color: #282a36;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(255, 121, 198, 0.4);
+        }
+
+        #btn-start:hover {
+            background-color: #ff92d0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="canvas-container"></div>
+
+    <button id="btn-start">Connect & Start Audio Context</button>
+
+    <div id="ui-layer">
+        <div id="subtitle">Connecting to Yumi...</div>
+    </div>
+
+    <script>
+        const modelUrl = "../10an_culture_t01.model3.json";
+        let live2dModel = null;
+        let audioContext = null;
+        let analyser = null;
+        let socket = null;
+
+        const FACIAL_EXPRESSIONS = {
+            "smile": "face_smile_01",
+            "angry": "face_angry_01",
+            "sad": "face_sad_01",
+            "surprise": "face_surprise_01",
+            "scared": "face_scared_01",
+            "shy": "face_shy_01",
+            "normal": null
+        };
+
+        const BODY_MOTIONS = {
+            "nod": "w-cute-nod01",
+            "shakehead": "w-cute-shakehead01",
+            "tilthead": "w-cute-tilthead01",
+            "fidget": "w-cute-fidget01",
+            "forward": "w-cute-forward01",
+            "lookaway": "w-normal-lookaway01",
+            "greeting": "w-normal-greeting01",
+            "idle": null
+        };
+
+        // --- PixiJS & Live2D Setup ---
+        const app = new PIXI.Application({
+            view: document.createElement('canvas'),
+            transparent: true,
+            autoDensity: true,
+            resizeTo: window
+        });
+
+        // Prevent all global Pixi interactions from propagating to elements
+        app.renderer.plugins.interaction.destroy();
+
+        document.getElementById('canvas-container').appendChild(app.view);
+
+        async function initLive2D() {
+            try {
+                // Load the model
+                live2dModel = await PIXI.live2d.Live2DModel.from(modelUrl);
+                app.stage.addChild(live2dModel);
+
+                // Inject unlisted face motions into the motion manager
+                for (let key in FACIAL_EXPRESSIONS) {
+                    const group = FACIAL_EXPRESSIONS[key];
+                    if (group) {
+                        live2dModel.internalModel.motionManager.motionGroups[group] = [{ file: `motions/${group}.motion3.json` }];
+                    }
+                }
+
+                // Proper Scaling based on unscaled model size
+                const unscaledWidth = live2dModel.internalModel.width;
+                const unscaledHeight = live2dModel.internalModel.height;
+                const scaleX = window.innerWidth / unscaledWidth;
+                const scaleY = window.innerHeight / unscaledHeight;
+
+                // Scale so that it strictly fits within the screen height
+                const scale = Math.min(scaleX, scaleY) * 0.95;
+                live2dModel.scale.set(scale);
+
+                // Center Horizontally, Align to Bottom Vertically
+                live2dModel.x = (window.innerWidth - (unscaledWidth * scale)) / 2;
+                live2dModel.y = (window.innerHeight - (unscaledHeight * scale));
+
+                // Properly disable mouse tracking in pixi-live2d-display
+                live2dModel.pointerTracking = false;
+
+                // If it STILL tracks, force the focus controller to center
+                if (live2dModel.internalModel.focusController) {
+                    live2dModel.internalModel.focusController.focus(0, 0);
+                }
+
+                console.log("Model loaded successfully.");
+
+            } catch (err) {
+                console.error("Error loading Live2D model:", err);
+                document.getElementById('subtitle').innerText = "Error loading Live2D model! Check console.";
+                document.getElementById('ui-layer').style.opacity = 1;
+            }
+        }
+
+        // --- WebSocket & Lip Sync Setup ---
+        function initWebSocket() {
+            socket = new WebSocket("ws://localhost:8000/ws");
+
+            socket.onopen = () => {
+                console.log("Connected to Python backend.");
+                document.getElementById('subtitle').innerText = "Listening...";
+                document.getElementById('ui-layer').style.opacity = 0; // Hide until spoken to
+            };
+
+            socket.onmessage = async (event) => {
+                const data = JSON.parse(event.data);
+                console.log("Received AI payload:", data);
+
+                // 1. Show Subtitle
+                document.getElementById('subtitle').innerText = data.text;
+                document.getElementById('ui-layer').style.opacity = 1;
+
+                // 2. Map and Play Expressions/Motions
+                const bodyGroup = BODY_MOTIONS[data.motion?.toLowerCase()];
+                const faceGroup = FACIAL_EXPRESSIONS[data.expression?.toLowerCase()];
+
+                if (bodyGroup) {
+                    try {
+                        live2dModel.motion(bodyGroup);
+                    } catch (e) { }
+                }
+
+                if (faceGroup) {
+                    try {
+                        live2dModel.motion(faceGroup);
+                    } catch (e) { }
+                }
+
+                // 3. Play Audio and Auto-Lip Sync
+                if (data.audio) {
+                    await playAudioAndSyncLips(data.audio);
+
+                    setTimeout(() => {
+                        document.getElementById('ui-layer').style.opacity = 0;
+                    }, 500);
+                }
+            };
+
+            socket.onclose = () => {
+                console.log("Disconnected. Reconnecting in 3s...");
+                setTimeout(initWebSocket, 3000);
+            };
+        }
+
+        async function playAudioAndSyncLips(base64Audio) {
+            if (!audioContext) return;
+
+            const binaryString = window.atob(base64Audio);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+
+            const audioBuffer = await audioContext.decodeAudioData(bytes.buffer);
+            const source = audioContext.createBufferSource();
+            source.buffer = audioBuffer;
+
+            source.connect(analyser);
+            analyser.connect(audioContext.destination);
+
+            source.start(0);
+
+            const pcmData = new Float32Array(analyser.fftSize);
+
+            const lipSyncLoop = () => {
+                if (!live2dModel) return;
+
+                analyser.getFloatTimeDomainData(pcmData);
+                let sumSquares = 0.0;
+                for (const amplitude of pcmData) {
+                    sumSquares += amplitude * amplitude;
+                }
+                const rms = Math.sqrt(sumSquares / pcmData.length);
+
+                const mouthOpen = Math.min(1.0, rms * 15.0);
+                live2dModel.internalModel.coreModel.setParameterValueById("ParamMouthOpenY", mouthOpen);
+
+                if (source.playbackRate.value > 0) {
+                    requestAnimationFrame(lipSyncLoop);
+                }
+            };
+
+            requestAnimationFrame(lipSyncLoop);
+
+            return new Promise(resolve => {
+                source.onended = () => {
+                    live2dModel.internalModel.coreModel.setParameterValueById("ParamMouthOpenY", 0);
+                    resolve();
+                };
+            });
+        }
+
+        document.getElementById('btn-start').addEventListener('click', () => {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 512;
+
+            document.getElementById('btn-start').style.display = 'none';
+            initLive2D();
+            initWebSocket();
+        });
+
+        // Window resize handler
+        window.addEventListener('resize', () => {
+            if (live2dModel) {
+                const unscaledWidth = live2dModel.internalModel.width;
+                const unscaledHeight = live2dModel.internalModel.height;
+                const scaleX = window.innerWidth / unscaledWidth;
+                const scaleY = window.innerHeight / unscaledHeight;
+
+                const scale = Math.min(scaleX, scaleY) * 0.95;
+                live2dModel.scale.set(scale);
+
+                live2dModel.x = (window.innerWidth - (unscaledWidth * scale)) / 2;
+                live2dModel.y = (window.innerHeight - (unscaledHeight * scale));
+            }
+        });
+    </script>
+</body>
+
+</html>
