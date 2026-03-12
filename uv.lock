@@ -553,6 +553,23 @@ wheels = [
 ]
 
 [[package]]
+name = "elevenlabs"
+version = "2.38.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "pydantic-core" },
+    { name = "requests" },
+    { name = "typing-extensions" },
+    { name = "websockets" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/62/e2/f160788e20adaa5b8c9d61e17381131ef8b91003c0c84c982442fae32c2b/elevenlabs-2.38.1.tar.gz", hash = "sha256:4dba9e4b09639d1c2fb703792f1d9696cf2e36f4ff8800744839690f1173c0b2", size = 523201, upload-time = "2026-03-06T10:09:15.079Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d1/20/9a22e8fafafcf0a25a87065bf078ed73c98934414694950c0920d21a1a48/elevenlabs-2.38.1-py3-none-any.whl", hash = "sha256:a726347a38ab1fbe6d74094f327d0baf6b5eb1cc06bab21318b12a9d9f0d7f24", size = 1412352, upload-time = "2026-03-06T10:09:13.113Z" },
+]
+
+[[package]]
 name = "executing"
 version = "2.2.1"
 source = { registry = "https://pypi.org/simple" }
@@ -3004,6 +3021,7 @@ name = "yumi"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
+    { name = "elevenlabs" },
     { name = "fastapi" },
     { name = "faster-whisper" },
     { name = "langchain-core" },
@@ -3026,6 +3044,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "elevenlabs", specifier = ">=2.38.1" },
     { name = "fastapi", specifier = ">=0.135.1" },
     { name = "faster-whisper", specifier = ">=1.2.1" },
     { name = "jupyter", marker = "extra == 'dev'", specifier = ">=1.1.1" },
