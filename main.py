@@ -67,6 +67,9 @@ def think_node(state: MainState):
         "input": state["input"],
         "session_id": state["session_id"]
     })
+    # --- EMOTION/MOTION HANDLING (Step 2) ---
+    # The LLM output logic parses those fields. If they are missing or invalid,
+    # we provide safe fallbacks ("normal" for expression, "idle" for motion).
     return {
         "response": result["response"],
         "expression": result.get("expression", "normal"),
@@ -84,7 +87,9 @@ def speak_node(state: MainState):
     # Synthesize audio and get base64 string
     audio_b64, duration = speaker.speak(response_text, play_local=False)
     
-    # Prepare payload for frontend
+    # --- EMOTION/MOTION HANDLING (Step 3) ---
+    # The expression and motion fields (now populated by the LLM) are bundled into the JSON payload.
+    # This payload is sent via WebSocket to the frontend web UI to trigger the Live2D animations.
     payload = {
         "text": response_text,
         "expression": expression,

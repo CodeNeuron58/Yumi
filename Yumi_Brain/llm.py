@@ -21,6 +21,11 @@ prompt = ChatPromptTemplate.from_messages([
 
 class YumiResponse(BaseModel):
     response_text: str = Field(description="The conversational, concise text Yumi will speak out loud.")
+    
+    # --- EMOTION/MOTION HANDLING (Step 1) ---
+    # The LLM is forced to generate these specific fields alongside its text response.
+    # The values must be strings corresponding to the mapped keys in the frontend 
+    # (see FACIAL_EXPRESSIONS and BODY_MOTIONS in webui/index.html).
     expression: str = Field(description="The generic facial expression label (e.g. smile, angry, sad).")
     motion: str = Field(description="The generic body motion label (e.g. nod, tilthead, fidget).")
 
